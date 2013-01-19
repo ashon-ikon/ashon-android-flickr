@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="btn_clear">Clear</string>
+    <string name="btn_back">Back</string>
+    <string name="item_list_view_no_title">No Title</string>
+    <string name="item_list_view_no_description">No Description</string>
+    <string name="item_list_view_no_author">Unknown</string>
+    <string name="item_list_view_no_image">No image</string>
+    
+</resources>

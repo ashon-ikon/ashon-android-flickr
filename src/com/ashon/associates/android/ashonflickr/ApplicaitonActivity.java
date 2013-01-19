@@ -11,7 +11,10 @@ abstract class ApplicaitonActivity extends Activity {
 	protected 	String 		mApiKey;
 	protected	String		flickrRes;
 	
-	static final String	JSON_FEED	= "RAW_JSON_FEED";
+	static final String	JSON_FEED						= "RAW_JSON_FEED";
+	
+	static final String	REGISTRY_GALLERY_ACTIVITY_CLASS	= ".GalleryActivity.java";
+
 	
 	/**
 	 * @return the mApiKey

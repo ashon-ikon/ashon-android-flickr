@@ -1,116 +1,56 @@
 package com.ashon.associates.android.ashonflickr;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 
-import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
-
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import android.content.Context;
-import android.widget.Toast;
+import android.util.Log;
 
-public class FlickrApi 
+public class FlickrApi extends ConnectionManager
 {
 	/**
-	 * Image class to hold each image data
-	 * 
-	 * @author yinka
+	 * @author ashon
 	 *
 	 */
-	public class FlickrImage {
-		protected	String	imageUrlThmb	= "";
-		protected	String	imageUrl		= "";
-		protected	String	imageDesc		= "No description";
-		protected	String	imageTitle		= "Unknown Title";
-		protected	int		imageWidth;
-		/**
-		 * @return the imageWidth
-		 */
-		public int getImageWidth() {
-			return imageWidth;
-		}
-		/**
-		 * @param imageWidth the imageWidth to set
-		 */
-		public void setImageWidth(int imageWidth) {
-			this.imageWidth = imageWidth;
-		}
-		/**
-		 * @return the imageHeight
-		 */
-		public int getImageHeight() {
-			return imageHeight;
-		}
-		/**
-		 * @param imageHeight the imageHeight to set
-		 */
-		public void setImageHeight(int imageHeight) {
-			this.imageHeight = imageHeight;
-		}
-		protected	int		imageHeight;
+	public class FeedInfo {
+		private int		pages;
+		private int		per_page;
+		private int		total;
+		private int 	status;
 		
-		/**
-		 * @return the imageUrlThmb
-		 */
-		public String getImageUrlThmb() {
-			return imageUrlThmb;
+		public int getPages() {
+			return pages;
 		}
-		/**
-		 * @param imageUrlThmb the Image thumbnail URL to set
-		 */
-		public void setImageUrlThmb(String imageUrlThmb) {
-			this.imageUrlThmb = imageUrlThmb;
+		public void setPages(int pages) {
+			this.pages = pages;
 		}
-		/**
-		 * @return the imageUrl
-		 */
-		public String getImageUrl() {
-			return imageUrl;
+		public int getPer_page() {
+			return per_page;
 		}
-		/**
-		 * @param imageUrl the image URL to set
-		 */
-		public void setImageUrl(String imageUrl) {
-			this.imageUrl = imageUrl;
+		public void setPer_page(int per_page) {
+			this.per_page = per_page;
 		}
-		/**
-		 * @return the imageDesc
-		 */
-		public String getImageDesc() {
-			return imageDesc;
+		public int getTotal() {
+			return total;
 		}
-		/**
-		 * @param imageDesc the image description to set
-		 */
-		public void setImageDesc(String imageDesc) {
-			this.imageDesc = imageDesc;
+		public void setTotal(int total) {
+			this.total = total;
 		}
-		/**
-		 * @return the imageTitle
-		 */
-		public String getImageTitle() {
-			return imageTitle;
+		public int getStatus() {
+			return status;
 		}
-		/**
-		 * @param imageTitle the imageTitle to set
-		 */
-		public void setImageTitle(String imageTitle) {
-			this.imageTitle = imageTitle;
+		public void setStatus(int status) {
+			this.status = status;
 		}
+		
 	}
-	
+
+
 	/**
 	 * @param singleton instance
 	 */
@@ -118,27 +58,65 @@ public class FlickrApi
 	
 	protected	Context			mContext;
 	protected 	String 			mApiKey			= "";
-	protected	HttpPost		mhttpPost;
-	protected	HttpResponse	mhttpResponse;
-	
 	// Private Vars
 	private	String			mFeedFormat			= "";
 	private	String			mFeedExtras			= "description,license,owner_name,date_upload, date_taken,url_n,url_o";
+	private	int				mFeedsPerRequest	= 10;
 	private	boolean			mbNoJsonCallback	= true;
 	
 
 	// The array of our image class
-	protected	ArrayList<FlickrImage> imagesArray	= new ArrayList<FlickrApi.FlickrImage>(1);
+	protected	ArrayList<FlickrImage> imagesArray	= new ArrayList<FlickrImage>();
 	
 	final static String FLICKR_SERVICE_ENDPOINT	= "http://api.flickr.com/services/rest";
-	final static String FLICKR_RECENT_IMAGES		= "flickr.photos.getRecent";
-	final static String FLICKR_SEARCH_IMAGES		= "flickr.photos.search";
+	
+	final static String FLICKR_METHOD_SEARCH_IMAGES			= "flickr.photos.search";
+	final static String FLICKR_METHOD_RECENT_IMAGES			= "flickr.photos.getRecent";
 	
 	final static String FLICKR_FEED_TYPE_JSON				= "json";
 	final static String FLICKR_FEED_TYPE_XML				= "xml";
 	final static String FLICKR_FEED_TYPE_SERIAL				= "php_serial";
 	/** FEED OPTIONS */
+	final static String FLICKR_FEED_OPTION_API_KEY			= "api_key";
+	final static String FLICKR_FEED_OPTION_EXTRAS			= "extras";
+	final static String FLICKR_FEED_OPTION_FORMAT			= "format";
+	final static String FLICKR_FEED_OPTION_METHOD			= "method";
 	final static String FLICKR_FEED_OPTION_NO_JSON_FBACK	= "nojsoncallback";
+	final static String FLICKR_FEED_OPTION_PAGE				= "page";
+	final static String FLICKR_FEED_OPTION_PER_PAGE			= "per_page";
+	
+	/** FEED RESPONSE STATUS */
+	final static String FLICKR_RESPONSE_STATUS_OKAY			= "ok";
+	final static String FLICKR_RESPONSE_STATUS_FAIL			= "fail";
+	
+	/** RESPONSE DATA KEYS */
+	final static String FLICKR_DATA_KEY_CONTENT				= "_content";
+	final static String FLICKR_DATA_KEY_DATE_TAKEN			= "datetaken";
+	final static String FLICKR_DATA_KEY_DATE_UPLOADED		= "dateupload";
+	final static String FLICKR_DATA_KEY_IMAGE_DESCRIPTION	= "description";
+	final static String FLICKR_DATA_KEY_IMAGE_HEIGHT		= "height_o";
+	final static String FLICKR_DATA_KEY_IMAGE_ID			= "id";
+	final static String FLICKR_DATA_KEY_IMAGE_FARM			= "farm";
+	final static String FLICKR_DATA_KEY_IMAGE_OWNER			= "owner";
+	final static String FLICKR_DATA_KEY_IMAGE_OWNER_NAME	= "ownername";
+	final static String FLICKR_DATA_KEY_IMAGE_WIDTH			= "width_o";
+	final static String FLICKR_DATA_KEY_LICENSE				= "license";
+	final static String FLICKR_DATA_KEY_NO_OF_PAGES			= "pages";
+	final static String FLICKR_DATA_KEY_PAGE				= "page";
+	final static String FLICKR_DATA_KEY_PER_PAGE			= "perpage";
+	final static String FLICKR_DATA_KEY_PHOTOS_LIST			= "photo";
+	final static String FLICKR_DATA_KEY_PHOTOS				= "photos";
+	final static String FLICKR_DATA_KEY_SECRET				= "secret";
+	final static String FLICKR_DATA_KEY_SERVER				= "server";
+	final static String FLICKR_DATA_KEY_STATUS				= "stat";
+	final static String FLICKR_DATA_KEY_TOTAL				= "total";
+	final static String FLICKR_DATA_KEY_TITLE				= "title";
+	final static String FLICKR_DATA_KEY_URL_O				= "url_o";
+	final static String FLICKR_DATA_KEY_URL_N				= "url_n";
+	
+	/** LOCAL ERROR CODES */
+	final static int	ERROR_NO_ERROR						= 0;	// No Error, All is okay :)
+	final static int	ERROR_MISSING_API_KEY				= 1 << 0;	// No API key specified
 	/**
 	 * sizes canblog="1" canprint="1" candownload="1">
   <size label="Square" width="75" height="75" source="http://farm2.staticflickr.com/1103/567229075_2cf8456f01_s.jpg" url="http://www.flickr.com/photos/stewart/567229075/sizes/sq/" media="photo" />
@@ -175,7 +153,7 @@ public class FlickrApi
 	 * @param String API Key
 	 * @return boolean True on success
 	 */
-	public FlickrApi init(Context context, String apiKey) {
+	public FlickrApi init(Context context, String apiKey) throws ExceptionInInitializerError {
 		// Store the context
 		this.setContext(context);
 		// Store the API key
@@ -200,6 +178,18 @@ public class FlickrApi
 		this.mFeedFormat = feedFormat;
 	}
 	
+	/**
+	 * @return the mFeedsPerRequest
+	 */
+	public Integer getFeedsPerRequest() {
+		return mFeedsPerRequest;
+	}
+	/**
+	 * @param mFeedsPerRequest the mFeedsPerRequest to set
+	 */
+	public void setFeedsPerRequest(int mFeedsPerRequest) {
+		this.mFeedsPerRequest = mFeedsPerRequest;
+	}
 	/**
 	 * @return the mFeedExtras
 	 */
@@ -255,77 +245,6 @@ public class FlickrApi
 	}
 	
 	/**
-	 * This runs a HTTP post operation. A proxy for calling doPost without params
-	 *  
-	 * @param url
-	 * @return String Result of operation
-	 */
-	public String doPost(String url)
-	{
-		ArrayList<NameValuePair> emptyName	= new ArrayList<NameValuePair>(1);
-		
-		return doPost(url, emptyName);
-	}
-
-	/**
-	 * This runs a HTTP post operation
-	 *  
-	 * @param url
-	 * @param nameValuePairs
-	 * @return String Result of operation
-	 */
-	public String doPost(String url, ArrayList<NameValuePair> nameValuePairs)
-	{
-		// Ensure we have a valid key!
-		if (getApiKey().equals("")) {
-			Toast.makeText(getContext(), "FAILED!", Toast.LENGTH_LONG).show();
-			return "";
-		}
-		HttpClient		httpClient	= new DefaultHttpClient();
-		StringBuilder	strBuilder	= new StringBuilder();
-		BufferedReader	bReader;
-		// Test the connection
-		
-		
-		// Add the name pairs
-		try {
-			mhttpPost		= new HttpPost(url);
-			mhttpPost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
-			mhttpResponse	= httpClient.execute(mhttpPost);
-			bReader			= new BufferedReader(
-				new InputStreamReader(mhttpResponse.getEntity().getContent())
-			);
-			String line;
-			while ((line = bReader.readLine()) != null) {
-				System.out.println(line);
-				strBuilder.append(line);
-			}
-		} catch (UnsupportedEncodingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (UnknownHostException e) {
-			if (this.mContext != null) {
-				Toast.makeText(
-					this.mContext,
-					"Failed to access '"+url+"'. Please check your connection",
-					Toast.LENGTH_LONG
-				).show();
-			}
-			e.printStackTrace();
-			return "";
-		} catch (ClientProtocolException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		
-		return strBuilder.toString();
-	}
-	
-	/**
 	 * Reads the latest images public available
 	 * @return String
 	 */
@@ -334,10 +253,11 @@ public class FlickrApi
 		ArrayList<NameValuePair> params	= new ArrayList<NameValuePair>(1);
 		
 		// Add the required params
-		params.add(new BasicNameValuePair("api_key", getApiKey()));
-		params.add(new BasicNameValuePair("method", FLICKR_RECENT_IMAGES));
-		params.add(new BasicNameValuePair("format", getFeedFormat()));
-		params.add(new BasicNameValuePair("extras", getFeedExtras()));
+		params.add(new BasicNameValuePair(FLICKR_FEED_OPTION_API_KEY, getApiKey()));
+		params.add(new BasicNameValuePair(FLICKR_FEED_OPTION_METHOD, FLICKR_METHOD_RECENT_IMAGES));
+		params.add(new BasicNameValuePair(FLICKR_FEED_OPTION_FORMAT, getFeedFormat()));
+		params.add(new BasicNameValuePair(FLICKR_FEED_OPTION_EXTRAS, getFeedExtras()));
+		params.add(new BasicNameValuePair(FLICKR_FEED_OPTION_PER_PAGE, getFeedsPerRequest().toString()));
 		if (mbNoJsonCallback) {
 			params.add(new BasicNameValuePair(FLICKR_FEED_OPTION_NO_JSON_FBACK, "1"));
 		}
@@ -356,9 +276,194 @@ public class FlickrApi
 		return true;
 	}
 	
-//	protected Object getMainClass()
-//	{
-//		PackageManager.get;
-//	}
+	/**
+	 * Checks that we have a valid API key
+	 * @return
+	 */
+	protected boolean gotApiKey() {
+		// Ensure we have a valid key!
+		if (getApiKey().equals("")) {
+			return false;
+		}
+		return true;
+	}
+	
+	/**
+	 * Gets the images From string feed
+	 * @param pixFeed
+	 * @return
+	 */
+	public static FeedInfo getFeedInfo(String pixFeed) {
+//		ArrayList<FlickrImage> imageList	= new ArrayList<FlickrImage>();
+		if (pixFeed.length() > 0){
+			try {
+				JSONObject jsonObj	= new JSONObject(pixFeed);
+				if (jsonObj.has(FLICKR_DATA_KEY_STATUS)) {
+					if (jsonObj.getString(FLICKR_DATA_KEY_STATUS) == FLICKR_RESPONSE_STATUS_OKAY) {
+						if (jsonObj.has(FLICKR_DATA_KEY_PHOTOS)) {
+//							JSONArray jsonPhotos	= (JSONArray)jsonObj.getJSONArray(FLICKR_DATA_KEY_PHOTOS);
+							
+							// Get the
+						}
+					}
+				}
+			}  catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		return null;
+	}
+							
+	
+	/**
+	 * Gets the images From string feed
+	 * @param pixFeed
+	 * @return
+	 */
+	public ArrayList<FlickrImage> getImagesListsFromFeed(String pixFeed) throws Throwable{
+		ArrayList<FlickrImage> imageList	= new ArrayList<FlickrImage>();
+		if (pixFeed.length() > 0){
+			try {
+				JSONObject jsonObj	= new JSONObject(pixFeed);
+				if (jsonObj.has(FLICKR_DATA_KEY_STATUS)) {
+					if (jsonObj.getString(FLICKR_DATA_KEY_STATUS).equals(FLICKR_RESPONSE_STATUS_OKAY)) {
+						
+						if (jsonObj.has(FLICKR_DATA_KEY_PHOTOS)) {
+							JSONObject jsonPhotos	= (JSONObject)jsonObj.getJSONObject(FLICKR_DATA_KEY_PHOTOS);
+							// Get the photos 
+							
+							if (jsonPhotos.has(FLICKR_DATA_KEY_PHOTOS_LIST)) {
+								JSONArray jsonPhotosList	= (JSONArray)jsonPhotos.getJSONArray(FLICKR_DATA_KEY_PHOTOS_LIST);
 
+								for (int i = 0; i < jsonPhotosList.length(); i++) {
+									// Make a short named instance of this photo object
+									JSONObject	thisPhoto	= jsonPhotosList.getJSONObject(i); 
+									
+									// Get the image url
+									String imageUrl	= getImageUrlFromJsonObject(
+										jsonPhotosList.getJSONObject(i),
+										FlickrImage.IMAGE_SIZE_THUMBNAIL_100
+									);
+									
+									FlickrImage	dummyImage	= (FlickrImage)new FlickrImage(imageUrl);
+									// Set the Description
+									String imageDesc		= "";
+									if (thisPhoto.has(FLICKR_DATA_KEY_IMAGE_DESCRIPTION)) {
+										imageDesc	= thisPhoto.getJSONObject(FLICKR_DATA_KEY_IMAGE_DESCRIPTION)
+																		.getString(FLICKR_DATA_KEY_CONTENT);
+									}
+									dummyImage.setImageDesc(imageDesc);
+									
+									// Set the Title
+									String	imageTitle	= "";
+									if (thisPhoto.has(FLICKR_DATA_KEY_TITLE)) {
+										imageTitle		= thisPhoto.getString(FLICKR_DATA_KEY_TITLE);
+									}
+									dummyImage.setImageTitle(imageTitle);
+									
+									// Set the image dimensions
+									dummyImage.setImageThumbnailHeight(dummyImage.getDrawableImage().getIntrinsicHeight());
+									dummyImage.setImageThumbnailWidth(dummyImage.getDrawableImage().getIntrinsicWidth());
+									
+									// Set the image owner
+									String imageOwner	= "";
+									if (thisPhoto.has(FLICKR_DATA_KEY_IMAGE_OWNER_NAME)) {
+										imageOwner		= thisPhoto.getString(FLICKR_DATA_KEY_IMAGE_OWNER_NAME);
+									}
+									dummyImage.setImageOwner(imageOwner);
+									
+									// Set the image drawable
+									imageList.add(dummyImage);
+
+									dummyImage.debugProperties();
+								}
+							}
+						}
+						
+					} else {
+						// Determine the error and trigger it!!
+Log.d(
+		FlickrApi.getInstance().getClass().getSimpleName(),
+		"FEED not OKAY!!" + jsonObj.getString(FLICKR_DATA_KEY_STATUS)
+);						
+					}	// End FLICKR_RESPONSE_STATUS_OKAY
+					
+				} else {
+					
+				} // End has FLICKR_DATA_KEY_STATUS
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		return imageList;
+	}
+	
+	public static String getImageUrlFromJsonObject(JSONObject photoObj, int size) throws JSONException {
+		if (null != photoObj) {
+			// Extract all the values
+			String farmId	= "";
+			String serverId	= "";
+			String imageId	= "";
+			String secret	= "";
+			String url		= "http://farm";
+			boolean okay	= true;
+			
+			if (photoObj.has(FLICKR_DATA_KEY_IMAGE_FARM)) {
+				farmId	= photoObj.getString(FLICKR_DATA_KEY_IMAGE_FARM);
+			} else {
+				okay 	= false;
+			}
+			
+			if (photoObj.has(FLICKR_DATA_KEY_SERVER)) {
+				serverId	= photoObj.getString(FLICKR_DATA_KEY_SERVER);
+			} else {
+				okay 	= false;
+			}
+			
+			if (photoObj.has(FLICKR_DATA_KEY_IMAGE_ID)) {
+				imageId	= photoObj.getString(FLICKR_DATA_KEY_IMAGE_ID);
+			} else {
+				okay 	= false;
+			}
+			
+			if (photoObj.has(FLICKR_DATA_KEY_SECRET)) {
+				secret	= photoObj.getString(FLICKR_DATA_KEY_SECRET);
+			} else {
+				okay 	= false;
+			}
+			// If we didn't have any troubles
+			if (okay) {
+				// Use size
+				String sizeType	= "";
+				switch(size) {
+				case	FlickrImage.IMAGE_SIZE_NONE: 				sizeType 	= ""; break;
+				case	FlickrImage.IMAGE_SIZE_SMALL_75: 			sizeType 	= "s"; break;
+				case	FlickrImage.IMAGE_SIZE_LARGE_SQUARE_150:	sizeType 	= "q"; break;
+				case	FlickrImage.IMAGE_SIZE_THUMBNAIL_100:		sizeType 	= "t"; break;
+				case	FlickrImage.IMAGE_SIZE_SMALL_240:			sizeType 	= "m"; break;
+				case	FlickrImage.IMAGE_SIZE_SMALL_320:			sizeType 	= "n"; break;
+				case	FlickrImage.IMAGE_SIZE_MEDIUM_500:			sizeType 	= "-"; break;
+				case	FlickrImage.IMAGE_SIZE_MEDIUM_640:			sizeType 	= "z"; break;
+				case	FlickrImage.IMAGE_SIZE_MEDIUM_800:			sizeType 	= "c"; break;
+				case	FlickrImage.IMAGE_SIZE_LARGE_1024:			sizeType 	= "b"; break;
+				case	FlickrImage.IMAGE_SIZE_ORIGINAL:			sizeType 	= "o"; break;
+				default:
+						
+				}
+				
+				url 	+= farmId+ ".staticflickr.com/"+serverId+"/"+imageId+"_"+secret;
+				url 	+= (!sizeType.equals("")? "_"+sizeType: "")+".jpg";
+Log.d(
+		FlickrApi.getInstance().getClass().getSimpleName(),
+		"URL: " + url
+);				
+				
+				return url;
+			}
+		}
+		return null;
+	}
+	
 }

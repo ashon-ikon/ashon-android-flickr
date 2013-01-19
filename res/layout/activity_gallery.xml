@@ -33,6 +33,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentLeft="true"
+        android:background="@color/gallery_list_view"
         android:paddingBottom="20sp"
         android:layout_below="@+id/searchLayout" >
 
@@ -44,6 +45,7 @@
         android:layout_height="wrap_content"
         android:layout_alignBaseline="@+id/gallery_layout"
         android:layout_alignParentBottom="true"
+        android:background="@color/gallery_list_count"
         android:text="@string/display_info" />
 
 </RelativeLayout>
